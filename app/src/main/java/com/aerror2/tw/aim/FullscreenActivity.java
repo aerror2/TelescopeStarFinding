@@ -12,9 +12,12 @@ import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.content.pm.PermissionInfo;
+import android.graphics.Point;
+import android.graphics.Rect;
 import android.net.Uri;
 import android.os.Bundle;
 import android.os.Process;
+import android.view.MotionEvent;
 import android.view.View;
 import android.view.SurfaceHolder;
 import android.view.SurfaceView;
@@ -22,6 +25,7 @@ import android.view.View.OnClickListener;
 
 import java.io.IOException;
 import java.lang.reflect.Method;
+import java.util.ArrayList;
 import java.util.List;
 
 import android.graphics.PixelFormat;
@@ -173,6 +177,30 @@ public class FullscreenActivity extends AppCompatActivity implements OnClickList
             surfaceView = (SurfaceView) findViewById(R.id.surfaceView);
             surfaceView.setFocusable(true);
             surfaceView.setOnClickListener(this);
+//            surfaceView.setOnTouchListener(new View.OnTouchListener() {
+//                @Override
+//                public boolean onTouch(View view, MotionEvent motionEvent) {
+//
+//                    onFocus(new Point((int)motionEvent.getX(),(int)motionEvent.getY()), new AutoFocusCallback() {
+//                        @Override
+//                        public void onAutoFocus(boolean success, Camera camera) {
+//                            if (success) {
+//                                camera.cancelAutoFocus();// 只有加上了这一句，才会自动对焦。
+//                                if (!Build.MODEL.equals("KORIDY H30")) {
+//                                    parameters = camera.getParameters();
+//                                    parameters.setFocusMode(Camera.Parameters.FOCUS_MODE_CONTINUOUS_PICTURE);// 1连续对焦
+//                                    camera.setParameters(parameters);
+//                                } else {
+//                                    parameters = camera.getParameters();
+//                                    parameters.setFocusMode(Camera.Parameters.FOCUS_MODE_AUTO);
+//                                    camera.setParameters(parameters);
+//                                }
+//                            }
+//                        }
+//                    });
+//                    return false;
+//                }
+  //          });
             surfaceView.setBackgroundColor(TRIM_MEMORY_BACKGROUND);
             surfaceHolder = surfaceView.getHolder();
             surfaceHolder.setType(SurfaceHolder.SURFACE_TYPE_PUSH_BUFFERS);
@@ -497,5 +525,72 @@ public class FullscreenActivity extends AppCompatActivity implements OnClickList
 
         }
 
+    }
+
+
+
+
+    /**
+     * 手动聚焦
+     *
+     * @param point 触屏坐标
+     */
+    protected boolean onFocus(Point point, Camera.AutoFocusCallback callback) {
+        if (camera == null) {
+            return false;
+        }
+
+        Camera.Parameters parameters = null;
+        try {
+            parameters = camera.getParameters();
+        } catch (Exception e) {
+            e.printStackTrace();
+            return false;
+        }
+        //不支持设置自定义聚焦，则使用自动聚焦，返回
+
+        if(Build.VERSION.SDK_INT >= 14) {
+
+            if (parameters.getMaxNumFocusAreas() <= 0) {
+                return focus(callback);
+            }
+
+            Log.i(TAG, "onCameraFocus:" + point.x + "," + point.y);
+
+            //定点对焦
+            List<Camera.Area> areas = new ArrayList<Camera.Area>();
+            int left = point.x - 300;
+            int top = point.y - 300;
+            int right = point.x + 300;
+            int bottom = point.y + 300;
+            left = left < -1000 ? -1000 : left;
+            top = top < -1000 ? -1000 : top;
+            right = right > 1000 ? 1000 : right;
+            bottom = bottom > 1000 ? 1000 : bottom;
+            areas.add(new Camera.Area(new Rect(left, top, right, bottom), 100));
+            parameters.setFocusAreas(areas);
+            try {
+                //本人使用的小米手机在设置聚焦区域的时候经常会出异常，看日志发现是框架层的字符串转int的时候出错了，
+                //目测是小米修改了框架层代码导致，在此try掉，对实际聚焦效果没影响
+                camera.setParameters(parameters);
+            } catch (Exception e) {
+                // TODO: handle exception
+                e.printStackTrace();
+                return false;
+            }
+        }
+
+
+        return focus(callback);
+    }
+
+    private boolean focus(Camera.AutoFocusCallback callback) {
+        try {
+            camera.autoFocus(callback);
+        } catch (Exception e) {
+            e.printStackTrace();
+            return false;
+        }
+        return true;
     }
 }
