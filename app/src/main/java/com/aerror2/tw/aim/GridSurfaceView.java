@@ -4,6 +4,8 @@ import android.content.Context;
 import android.graphics.Canvas;
 import android.graphics.Paint;
 import android.util.AttributeSet;
+import android.util.Log;
+import android.util.TypedValue;
 import android.view.SurfaceView;
 import android.view.WindowManager;
 
@@ -38,9 +40,14 @@ public class GridSurfaceView extends SurfaceView {
     protected void onMeasure(int widthMeasureSpec, int heightMeasureSpec) {
         super.onMeasure(widthMeasureSpec, heightMeasureSpec);
         WindowManager wm = (WindowManager) getContext().getSystemService(Context.WINDOW_SERVICE);
+
+        float pxDimension = TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, 40,getContext().getResources().getDisplayMetrics());
+
         width = wm.getDefaultDisplay().getWidth() ;
-        height = wm.getDefaultDisplay().getHeight();
-        setMeasuredDimension(width, height);
+        height = wm.getDefaultDisplay().getHeight()-(int)pxDimension;
+     //   setMeasuredDimension(width, height);
+
+        Log.d("Scope", "width:" + width + " height "+ height + " pxDimension" + pxDimension);
     }
 
     @Override

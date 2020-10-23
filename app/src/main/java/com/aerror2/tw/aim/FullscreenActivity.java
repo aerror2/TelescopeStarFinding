@@ -5,8 +5,16 @@ import android.Manifest;
 
 import androidx.appcompat.app.AppCompatActivity;
 
+import android.app.Activity;
+import android.app.AlertDialog;
 import android.content.Context;
+import android.content.DialogInterface;
+import android.content.Intent;
+import android.content.pm.PackageManager;
+import android.content.pm.PermissionInfo;
+import android.net.Uri;
 import android.os.Bundle;
+import android.os.Process;
 import android.view.View;
 import android.view.SurfaceHolder;
 import android.view.SurfaceView;
@@ -27,10 +35,6 @@ import android.util.Log;
 import android.widget.Button;
 import android.widget.SeekBar;
 
-import com.yanzhenjie.permission.Action;
-import com.yanzhenjie.permission.AndPermission;
-import com.yanzhenjie.permission.Rationale;
-import com.yanzhenjie.permission.RequestExecutor;
 
 
 /**
@@ -39,6 +43,7 @@ import com.yanzhenjie.permission.RequestExecutor;
  */
 public class FullscreenActivity extends AppCompatActivity implements OnClickListener, SurfaceHolder.Callback {
 
+    private  static final   String TAG="AIM";
     private SurfaceView surfaceView;
     private Camera camera;
     private Camera.Parameters parameters;
@@ -49,6 +54,7 @@ public class FullscreenActivity extends AppCompatActivity implements OnClickList
     private SurfaceHolder surfaceHolder;
     boolean mIsSupportZoom=false;
     int cameraPosition=1;
+    boolean permissionGranted = false;
     @Override
     protected void onDestroy() {
         super.onDestroy();
@@ -63,11 +69,8 @@ public class FullscreenActivity extends AppCompatActivity implements OnClickList
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
 
-        //requestWindowFeature(Window.FEATURE_NO_TITLE);
-       // getWindow().addFlags(WindowManager.LayoutParams.FLAG_FULLSCREEN);
+
         setContentView(R.layout.classes_activity_takephoto);
-
-
         initView();
         requestpermission();
     }
@@ -75,7 +78,14 @@ public class FullscreenActivity extends AppCompatActivity implements OnClickList
     @Override
     protected void onResume() {
         super.onResume();
-        requestpermission();
+        if(permissionGranted)
+        {
+            initCamera();
+        }
+        else
+        {
+            requestpermission();;
+        }
     }
 
     private void initView() {
@@ -108,14 +118,7 @@ public class FullscreenActivity extends AppCompatActivity implements OnClickList
             }
         });
 
-        surfaceView = (SurfaceView) findViewById(R.id.surfaceView);
-        surfaceView.setFocusable(true);
-        surfaceView.setOnClickListener(this);
-        surfaceView.setBackgroundColor(TRIM_MEMORY_BACKGROUND);
-        surfaceHolder = surfaceView.getHolder();
-        surfaceHolder.setType(SurfaceHolder.SURFACE_TYPE_PUSH_BUFFERS);
-        surfaceHolder.setKeepScreenOn(true);
-        surfaceHolder.addCallback(this);
+
     }
 
     @Override
@@ -130,22 +133,32 @@ public class FullscreenActivity extends AppCompatActivity implements OnClickList
     @Override
     public void surfaceCreated(SurfaceHolder holder) {
         // TODO Auto-generated method stub
-        try {
+
+        try
+        {
+            if(camera!=null)
             camera.setPreviewDisplay(surfaceHolder);
-        } catch (IOException e) {
-            e.printStackTrace();
+        }
+        catch (IOException e)
+        {
+            Log.e(TAG,"setPreviewDisplay failed");
         }
     }
 
     @Override
     public void surfaceChanged(SurfaceHolder holder, int format, int width, int height) {
+
+
+        Log.d(TAG, "surfaceChanged " + width + " height " + height);
         // 实现自动对焦
         camera.autoFocus(new AutoFocusCallback() {
             @Override
             public void onAutoFocus(boolean success, Camera camera) {
                 if (success) {
-                    camera.cancelAutoFocus();// 只有加上了这一句，才会自动对焦
-                    doAutoFocus();
+                    if(camera!=null) {
+                        camera.cancelAutoFocus();// 只有加上了这一句，才会自动对焦
+                        doAutoFocus();
+                    }
                 }
             }
         });
@@ -156,9 +169,21 @@ public class FullscreenActivity extends AppCompatActivity implements OnClickList
         if (null == camera) {
             camera = Camera.open();
         }
+        if(surfaceView==null) {
+            surfaceView = (SurfaceView) findViewById(R.id.surfaceView);
+            surfaceView.setFocusable(true);
+            surfaceView.setOnClickListener(this);
+            surfaceView.setBackgroundColor(TRIM_MEMORY_BACKGROUND);
+            surfaceHolder = surfaceView.getHolder();
+            surfaceHolder.setType(SurfaceHolder.SURFACE_TYPE_PUSH_BUFFERS);
+            surfaceHolder.setKeepScreenOn(true);
+            surfaceHolder.addCallback(this);
+        }
+
+
         parameters = camera.getParameters();
-        parameters.setPictureFormat(PixelFormat.JPEG);
-      //  parameters.setFlashMode(Parameters.FLASH_MODE_TORCH);
+      //  parameters.setPictureFormat(PixelFormat.JPEG);
+
         if (!Build.MODEL.equals("KORIDY H30")) {
             parameters.setFocusMode(Camera.Parameters.FOCUS_MODE_CONTINUOUS_PICTURE);// 1连续对焦
         } else {
@@ -166,13 +191,21 @@ public class FullscreenActivity extends AppCompatActivity implements OnClickList
         }
         setDispaly(camera);
         camera.setParameters(parameters);
-        camera.startPreview();
+        try
+        {
+            camera.setPreviewDisplay(surfaceHolder);
+        }
+        catch (IOException e)
+        {
+            Log.e(TAG,"setPreviewDisplay failed");
+        }
         camera.cancelAutoFocus();// 2如果要实现连续的自动对焦，这一句必须加上
         mIsSupportZoom = isSupportZoom();
-        if(mIsSupportZoom)
-        {
-            thebar.setMax(camera.getParameters().getMaxZoom());
-        }
+        camera.startPreview();
+
+
+
+
     }
 
     // 控制图像的正确显示方向
@@ -194,7 +227,7 @@ public class FullscreenActivity extends AppCompatActivity implements OnClickList
                 downPolymorphic.invoke(camera, new Object[]{i});
             }
         } catch (Exception e) {
-            Log.e("Came_e", "图像出错");
+            Log.e(TAG, "setDisplayOrientation error");
         }
     }
 
@@ -211,6 +244,11 @@ public class FullscreenActivity extends AppCompatActivity implements OnClickList
 
     // handle button auto focus
     private void doAutoFocus() {
+        if(camera==null) return;
+
+        if(cameraPosition==0)
+            return ;
+
         parameters = camera.getParameters();
         parameters.setFocusMode(Camera.Parameters.FOCUS_MODE_AUTO);
         camera.setParameters(parameters);
@@ -227,7 +265,7 @@ public class FullscreenActivity extends AppCompatActivity implements OnClickList
                         parameters = camera.getParameters();
                         parameters.setFocusMode(Camera.Parameters.FOCUS_MODE_AUTO);
                         camera.setParameters(parameters);
-                    }
+                  }
                 }
             }
         });
@@ -296,32 +334,118 @@ public class FullscreenActivity extends AppCompatActivity implements OnClickList
 
 
 
+    final static int PermissionRquestCode = 6554;
+    final static int PermissionResultCode = 6555;
+
+    /** 在手机设置中打开的应用权限 */
+    private static void PermissionSetting(final Activity activity, final String permission)
+    {
+        if (permission.trim().equals("")) return;
+
+        // 获取权限对应的标题和详细说明信息
+        String permissionLabel = "";
+        String permissionDescription = "";
+
+        try
+        {
+            PackageManager packageManager = activity.getPackageManager();
+            // Tools.showText("permission -> " + permission);
+
+            PermissionInfo permissionInfo = packageManager.getPermissionInfo(permission, 0);
+
+            // PermissionGroupInfo permissionGroupInfo = packageManager.getPermissionGroupInfo(permissionInfo.group, 0);
+            // Tools.showText("permission组 -> " + permissionGroupInfo.loadLabel(packageManager).toString());
+
+            permissionLabel = permissionInfo.loadLabel(packageManager).toString();
+            // Tools.showText("permission名称 -> " + permissionLabel);
+
+            permissionDescription = permissionInfo.loadDescription(packageManager).toString();
+            // Tools.showText("permission描述 -> " + permissionDescription);
+
+        }
+        catch (Exception ex)
+        {
+            return;
+        }
+
+        // 自定义Dialog弹窗，显示权限请求
+        permissionLabel = "Application need ：" + permissionLabel + "\r\n" + permission;
+        AlertDialog.Builder builder = new AlertDialog.Builder(activity);
+        builder.setCancelable(false);
+        builder.setTitle(permissionLabel);
+        builder.setMessage(permissionDescription);
+        builder.setPositiveButton("Add permission", new DialogInterface.OnClickListener() {
+                    @Override
+                    public void onClick(DialogInterface dialogInterface, int i) {
+                        dialogInterface.dismiss();
+
+                        // 打开应用对应的权限设置界面
+                        String action = android.provider.Settings.ACTION_APPLICATION_DETAILS_SETTINGS;
+                        Intent intent = new Intent(action);
+                        Uri uri = Uri.fromParts("package", activity.getPackageName(), null);
+                        intent.setData(uri);
+                        activity.startActivityForResult(intent, PermissionResultCode);	// 从应用设置界面返回时执行OnActivityResult
+                    }
+                }
+        );
+
+        builder.setNegativeButton("Deny and Exit", new DialogInterface.OnClickListener() {
+            @Override
+            public void onClick(DialogInterface dialog, int which) {
+                dialog.dismiss();
+
+                // 若拒绝了所需的权限请求，则退出应用
+                activity.finish();
+                System.exit(0);
+            }
+        });
+        builder.show();
+    }
+
+
+    /** 处理权限请求结果逻辑，再次调用请求、或提示跳转设置界面 */
+    @Override
+    public void onRequestPermissionsResult(int requestCode,  String[] permissions,
+                                int[] grantResults) {
+
+        Log.d(TAG,"onRequestPermissionsResult");
+        if (requestCode == PermissionRquestCode) {
+            int ret = this.checkPermission(Manifest.permission.CAMERA, Process.myPid(), Process.myUid());
+            if (ret == PackageManager
+                    .PERMISSION_GRANTED)
+            {
+                onPermissionGranted();
+            }
+        }
+    }
+
+    void onPermissionGranted()
+    {
+        permissionGranted = true;
+        initCamera();
+    }
+
     void requestpermission()
     {
+        int sdkVersion = this.getApplicationInfo().targetSdkVersion;
+        if (Build.VERSION.SDK_INT >= 23 && sdkVersion >= 23) {
+            int ret = this.checkPermission(Manifest.permission.CAMERA, Process.myPid(), Process.myUid());
+            if (ret != PackageManager
+                    .PERMISSION_GRANTED)
+            {
+                requestPermissions(new String[]{Manifest.permission.CAMERA}, PermissionRquestCode);
+            }
+            else
+            {
+                onPermissionGranted();
+            }
 
+        }
+        else
+        {
+            onPermissionGranted();
+        }
 
-        AndPermission.with(this)
-                .permission(Manifest.permission.CAMERA)
-                .rationale(new Rationale() {
-                    @Override
-                    public void showRationale(Context context, List<String> permissions, RequestExecutor executor) {
-                        executor.execute();
-                    }
-                })
-                .onGranted(new Action() {
-                    @Override
-                    public void onAction(List<String> permissions) {
-                        Log.e("TTT", "用户给权限");
-                        initCamera();
-                    }
-                })
-                .onDenied(new Action() {
-                    @Override
-                    public void onAction(List<String> permissions) {
-                        Log.e("TTT", "用户拒绝权限");
-                    }
-                })
-                .start();
     }
 
     void switchCamera()
