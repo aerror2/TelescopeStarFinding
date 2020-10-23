@@ -44,8 +44,8 @@ public class GridSurfaceView extends SurfaceView {
         float pxDimension = TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, 40,getContext().getResources().getDisplayMetrics());
 
         width = wm.getDefaultDisplay().getWidth() ;
-        height = wm.getDefaultDisplay().getHeight()-(int)pxDimension;
-     //   setMeasuredDimension(width, height);
+        height = width;
+        setMeasuredDimension(width, height);
 
         Log.d("Scope", "width:" + width + " height "+ height + " pxDimension" + pxDimension);
     }
@@ -54,8 +54,8 @@ public class GridSurfaceView extends SurfaceView {
     protected void onDraw(Canvas canvas) {
         super.onDraw(canvas);
 
-        canvas.drawLine(0, height/2, width, height/2, mPaint);
-        canvas.drawLine(width/2, 0, width/2, height, mPaint);
+//        canvas.drawLine(0, height/2, width, height/2, mPaint);
+//        canvas.drawLine(width/2, 0, width/2, height, mPaint);
         int radius = 25;
         for(int i=0; i < 9 ;i ++) {
             canvas.drawCircle(width / 2, height / 2,radius , mPaint);
@@ -63,6 +63,15 @@ public class GridSurfaceView extends SurfaceView {
                 radius +=50;
             else
                 radius +=100;
+        }
+
+        for(int i=0;i<12;i++)
+        {
+            double angle = Math.toRadians((double) (30 + (double)i*30));
+
+            int dy =  (int)(Math.sin(angle) * (double) width);
+            int dx =  (int)(Math.cos(angle) * (double) width);
+            canvas.drawLine(width/2,height/2,width/2+dx,height/2+dy,mPaint);
         }
 
 
