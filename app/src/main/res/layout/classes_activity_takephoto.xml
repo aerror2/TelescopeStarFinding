@@ -29,7 +29,7 @@
     </LinearLayout>
 
 
-    <com.aerror2.tw.aim.GridSurfaceView
+    <com.aerror2.tw.finderscope.GridSurfaceView
 
         android:id="@+id/surfaceView"
         android:layout_width="match_parent"

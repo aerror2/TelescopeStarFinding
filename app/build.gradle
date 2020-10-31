@@ -3,7 +3,7 @@ apply plugin: 'com.android.application'
 android {
     compileSdkVersion 29
     defaultConfig {
-        applicationId "com.aerror2.tw.aim"
+        applicationId "com.aerror2.tw.finderscope"
         minSdkVersion 24
         targetSdkVersion 29
         versionCode 1

@@ -1,4 +1,4 @@
-package com.aerror2.tw.aim;
+package com.aerror2.tw.finderscope;
 
 import android.content.Context;
 import android.graphics.Canvas;

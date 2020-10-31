@@ -1,4 +1,4 @@
-package com.aerror2.tw.aim;
+package com.aerror2.tw.finderscope;
 
 
 import android.Manifest;
@@ -217,6 +217,8 @@ public class FullscreenActivity extends AppCompatActivity implements OnClickList
         } else {
             parameters.setFocusMode(Camera.Parameters.FOCUS_MODE_AUTO);
         }
+
+
         setDispaly(camera);
         camera.setParameters(parameters);
         try
