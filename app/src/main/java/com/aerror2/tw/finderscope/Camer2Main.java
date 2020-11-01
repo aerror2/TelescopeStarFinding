@@ -8,12 +8,14 @@ import androidx.core.app.ActivityCompat;
 
 import android.content.Context;
 import android.content.pm.PackageManager;
+import android.graphics.Rect;
 import android.graphics.SurfaceTexture;
 import android.hardware.camera2.CameraAccessException;
 import android.hardware.camera2.CameraCaptureSession;
 import android.hardware.camera2.CameraCharacteristics;
 import android.hardware.camera2.CameraDevice;
 import android.hardware.camera2.CameraManager;
+import android.hardware.camera2.CameraMetadata;
 import android.hardware.camera2.CaptureRequest;
 import android.hardware.camera2.CaptureResult;
 import android.hardware.camera2.TotalCaptureResult;
@@ -25,6 +27,7 @@ import android.os.Process;
 import android.util.Log;
 import android.view.Surface;
 import android.view.TextureView;
+import android.widget.SeekBar;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -45,8 +48,11 @@ public class Camer2Main extends AppCompatActivity  {
     private SurfaceTexture mSurfaceTexture;
     private Surface mSurface;
     private CameraCharacteristics mCharacteristics;
+    CaptureRequest.Builder mPreviewBuilder;
 
     private TextureView  mTexView;
+
+    private  SeekBar mZoomBar;
 
     private void startPreview()
     {
@@ -113,11 +119,15 @@ public class Camer2Main extends AppCompatActivity  {
         super.onCreate(savedInstanceState);
 
         setContentView(R.layout.activity_camer2);
-        mTexView = findViewById(R.id.texture_preview);
+        mTexView = (TextureView) findViewById(R.id.texture_preview);
         mTexView.setSurfaceTextureListener(mSurfaceListener);
         mSurfaceTexture = mTexView.getSurfaceTexture();
         mMainHandler  = new Handler(Looper.getMainLooper());
+        mZoomBar = (SeekBar)findViewById(R.id.zoombar);
+        mZoomBar.setOnSeekBarChangeListener(mZoombarChanged);
         requestpermission();
+
+
 
     }
 
@@ -188,14 +198,40 @@ public class Camer2Main extends AppCompatActivity  {
 
 
     public CaptureRequest getPreviewRequest(CaptureRequest.Builder builder) {
-        int afMode = getValidAFMode(CaptureRequest.CONTROL_AF_MODE_CONTINUOUS_PICTURE);
+        //int afMode = getValidAFMode(CaptureRequest.CONTROL_AF_MODE_CONTINUOUS_PICTURE);
         int antiBMode = getValidAntiBandingMode(CaptureRequest.CONTROL_AE_ANTIBANDING_MODE_AUTO);
-        builder.set(CaptureRequest.CONTROL_AF_MODE, afMode);
+        //builder.set(CaptureRequest.CONTROL_AF_MODE, afMode);
+
+      //  builder.set(CaptureRequest.CONTROL_AE_MODE, CameraMetadata.CONTROL_AE_MODE_OFF);
+        builder.set(CaptureRequest.CONTROL_AF_MODE, CameraMetadata.CONTROL_AF_MODE_OFF);
+        builder.set(CaptureRequest.LENS_FOCUS_DISTANCE, 0.0f);
+
         builder.set(CaptureRequest.CONTROL_AE_ANTIBANDING_MODE, antiBMode);
         builder.set(CaptureRequest.CONTROL_MODE, CaptureRequest.CONTROL_MODE_AUTO);
         builder.set(CaptureRequest.CONTROL_AF_TRIGGER, CaptureRequest.CONTROL_AF_TRIGGER_IDLE);
+
         return builder.build();
     }
+
+
+    CaptureRequest.Builder createBuilder(int type, Surface surface) {
+        try {
+            CaptureRequest.Builder builder = mCamDevice.createCaptureRequest(type);
+            builder.addTarget(surface);
+            return builder;
+        } catch (CameraAccessException | IllegalStateException e) {
+            e.printStackTrace();
+        }
+        return null;
+    }
+
+    private CaptureRequest.Builder getPreviewBuilder() {
+        if (mPreviewBuilder == null) {
+            mPreviewBuilder = createBuilder(CameraDevice.TEMPLATE_PREVIEW, mSurface);
+        }
+        return mPreviewBuilder;
+    }
+
 
     //session callback
     private CameraCaptureSession.StateCallback sessionStateCb = new CameraCaptureSession
@@ -205,8 +241,7 @@ public class Camer2Main extends AppCompatActivity  {
             Log.d(TAG, " session onConfigured id:" + session.getDevice().getId());
             mSession = session;
             try {
-                CaptureRequest.Builder builder = mCamDevice.createCaptureRequest(CameraDevice.TEMPLATE_PREVIEW);
-                builder.addTarget(mSurface);
+                CaptureRequest.Builder builder =getPreviewBuilder();
 
                 //   updateRequestFromSetting(builder);
                 CaptureRequest request = getPreviewRequest(builder);
@@ -348,5 +383,74 @@ public class Camer2Main extends AppCompatActivity  {
         }
 
     }
+
+
+    public CaptureRequest getFocusDistanceRequest(CaptureRequest.Builder builder, float distance) {
+        int afMode = getValidAFMode(CaptureRequest.CONTROL_AF_MODE_OFF);
+        // preview
+        builder.set(CaptureRequest.CONTROL_AF_MODE, afMode);
+        float miniDistance = getMinimumDistance();
+        if (miniDistance > 0) {
+            builder.set(CaptureRequest.LENS_FOCUS_DISTANCE, miniDistance * distance);
+        }
+        return builder.build();
+    }
+
+
+    public CaptureRequest getZoomRequest(CaptureRequest.Builder builder,  float value) {
+
+            float maxzoom = mCharacteristics.get(CameraCharacteristics.SCALER_AVAILABLE_MAX_DIGITAL_ZOOM) ;
+
+            float zv = maxzoom * value;
+            if(zv < maxzoom/2 )
+                zv  =  maxzoom/2;
+
+            Rect m = mCharacteristics.get(CameraCharacteristics.SENSOR_INFO_ACTIVE_ARRAY_SIZE);
+
+
+            int mCenterX = m.width()/2;
+            int mCenterY = m.height()/2;
+
+
+
+            int zoomWidth = (int) ( zv * m.width() /maxzoom );
+            int zoomHeith = (int) ( zv *m.height()  /maxzoom );
+
+
+
+            Rect zoom =new Rect (mCenterX - zoomWidth/2, mCenterY -zoomHeith/2,  zoomWidth, zoomHeith );
+
+            builder.set(CaptureRequest.SCALER_CROP_REGION, zoom);
+            return builder.build();
+    }
+
+    private SeekBar.OnSeekBarChangeListener mZoombarChanged =
+        new SeekBar.OnSeekBarChangeListener() {
+            @Override
+            public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {
+                float value = progress / (float) seekBar.getMax();
+                if(mSession!=null)
+                {
+                    CaptureRequest request = getZoomRequest(getPreviewBuilder(), 1-value);
+                    try {
+                        mSession.setRepeatingRequest(request, mPreviewCallback, mMainHandler);
+                    } catch (CameraAccessException e) {
+                        e.printStackTrace();
+                    }
+
+                }
+               // uiEvent.onSettingChange(CaptureRequest.LENS_FOCUS_DISTANCE, value);
+            }
+
+            @Override
+            public void onStartTrackingTouch(SeekBar seekBar) {
+
+            }
+
+            @Override
+            public void onStopTrackingTouch(SeekBar seekBar) {
+            }
+        };
+
 
 }
