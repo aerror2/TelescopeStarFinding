@@ -4,7 +4,10 @@ import android.content.Context;
 import android.graphics.Canvas;
 import android.graphics.Paint;
 import android.util.AttributeSet;
+import android.util.Log;
+import android.util.TypedValue;
 import android.view.View;
+import android.view.WindowManager;
 
 
 /**
@@ -35,11 +38,26 @@ public class MyDrawView extends View {
 
     }
 
-    @Override
-    protected void onMeasure(int widthMeasureSpec, int heightMeasureSpec) {
-        super.onMeasure(widthMeasureSpec, heightMeasureSpec);
 
-    }
+
+//    @SuppressWarnings("deprecation")
+//    @Override
+//    protected void onMeasure(int widthMeasureSpec, int heightMeasureSpec) {
+//        super.onMeasure(widthMeasureSpec, heightMeasureSpec);
+//        WindowManager wm = (WindowManager) getContext().getSystemService(Context.WINDOW_SERVICE);
+//        width = wm.getDefaultDisplay().getWidth() ;
+//        height = width;
+//        setMeasuredDimension(width, height);
+//
+//    }
+
+//    @Override
+//    protected void onMeasure(int widthMeasureSpec, int heightMeasureSpec) {
+//        super.onMeasure(widthMeasureSpec, heightMeasureSpec);
+//        width = wm.getDefaultDisplay().getWidth() ;
+//        height = width;
+//        setMeasuredDimension(width, height);
+//    }
 
     @Override
     protected void onDraw(Canvas canvas) {

@@ -9,13 +9,20 @@
     <!-- The primary full-screen view. This can be replaced with whatever view
          is needed to present your content, e.g. VideoView, SurfaceView,
          TextureView, etc. -->
-    <TextureView
-        android:id="@+id/texture_preview"
+
+    <com.aerror2.tw.finderscope.MyTextureView
         android:layout_width="match_parent"
-        android:layout_height="match_parent"/>
-    <com.aerror2.tw.finderscope.MyDrawView
-        android:layout_width="match_parent"
-        android:layout_height="match_parent" />
+        android:layout_height="match_parent" >
+        <TextureView
+            android:id="@+id/texture_preview"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"/>
+
+        <com.aerror2.tw.finderscope.MyDrawView
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"/>
+
+    </com.aerror2.tw.finderscope.MyTextureView>
     <!-- This FrameLayout insets its children based on system windows using
          android:fitsSystemWindows. -->
     <FrameLayout
@@ -31,6 +38,9 @@
             android:layout_gravity="bottom|center_horizontal"
             android:background="@color/black_overlay"
             android:orientation="horizontal"
+            android:layout_marginBottom="50dp"
+            android:layout_marginLeft="25dp"
+            android:layout_marginRight="25dp"
             tools:ignore="UselessParent">
 
             <SeekBar

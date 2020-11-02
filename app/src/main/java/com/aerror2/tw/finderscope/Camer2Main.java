@@ -85,6 +85,8 @@ public class Camer2Main extends AppCompatActivity  {
         @Override
         public boolean onSurfaceTextureDestroyed(SurfaceTexture surfaceTexture) {
             return false;
+
+
         }
 
         @Override
@@ -400,27 +402,22 @@ public class Camer2Main extends AppCompatActivity  {
     public CaptureRequest getZoomRequest(CaptureRequest.Builder builder,  float value) {
 
             float maxzoom = mCharacteristics.get(CameraCharacteristics.SCALER_AVAILABLE_MAX_DIGITAL_ZOOM) ;
-
-            float zv = maxzoom * value;
-            if(zv < maxzoom/2 )
-                zv  =  maxzoom/2;
-
             Rect m = mCharacteristics.get(CameraCharacteristics.SENSOR_INFO_ACTIVE_ARRAY_SIZE);
+            float zv = (float) (maxzoom * value) ;
+            if(zv < 5) {
+                zv = 5;
+            }
 
 
-            int mCenterX = m.width()/2;
-            int mCenterY = m.height()/2;
+            int cropW = (int)(m.width() * zv/maxzoom );
+            int cropH = (int)(m.height() * zv/maxzoom) ;
+            int left = (m.width()-cropW)/2;
+            int top = (m.height()-cropH)/2;
+            Rect zoomRect = new Rect(left, top,
+                    cropW,
+                    cropH);
 
-
-
-            int zoomWidth = (int) ( zv * m.width() /maxzoom );
-            int zoomHeith = (int) ( zv *m.height()  /maxzoom );
-
-
-
-            Rect zoom =new Rect (mCenterX - zoomWidth/2, mCenterY -zoomHeith/2,  zoomWidth, zoomHeith );
-
-            builder.set(CaptureRequest.SCALER_CROP_REGION, zoom);
+            builder.set(CaptureRequest.SCALER_CROP_REGION, zoomRect);
             return builder.build();
     }
 
@@ -439,7 +436,6 @@ public class Camer2Main extends AppCompatActivity  {
                     }
 
                 }
-               // uiEvent.onSettingChange(CaptureRequest.LENS_FOCUS_DISTANCE, value);
             }
 
             @Override
